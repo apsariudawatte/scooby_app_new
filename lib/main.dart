@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:scooby_app_new/views/home_screen.dart';
+import 'package:scooby_app_new/views/login_screen.dart';
+import 'package:scooby_app_new/views/register_pet_owner.dart';
+import 'package:scooby_app_new/views/register_service_provider.dart';
 import 'package:scooby_app_new/views/splash_screen.dart';
 
 void main() async {
@@ -21,7 +25,14 @@ class ScoobyApp extends StatelessWidget {
       primarySwatch: Colors.deepPurple, 
       ),
 
-      home: const SplashScreen(),
+      initialRoute: '/',  // Splash Screen will show first
+      routes: {
+        '/': (context) => const SplashScreen(),
+        '/login': (context) => const LoginScreen(),
+        '/registerPetOwner': (context) => const RegisterPetOwnerScreen(),
+        '/registerServiceProvider': (context) => const RegisterServiceProviderScreen(),
+        '/petOwnerHome': (context) => const HomeScreen(),
+      },
     );
   }
 }
