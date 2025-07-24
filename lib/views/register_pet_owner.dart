@@ -49,7 +49,7 @@ class _RegisterPetOwnerScreenState extends State<RegisterPetOwnerScreen> {
                 ),
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
-                    // TODO: Call register function
+                    
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Registering...')),
                     );

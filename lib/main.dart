@@ -17,7 +17,10 @@ class ScoobyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Scooby App',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(primarySwatch: const Color.fromARGB(255, 187, 111, 227)),
+      theme: ThemeData(
+      primarySwatch: Colors.deepPurple, 
+      ),
+
       home: const SplashScreen(),
     );
   }

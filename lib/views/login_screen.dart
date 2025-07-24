@@ -126,11 +126,11 @@ class _LoginScreenState extends State<LoginScreen> {
               const Divider(),
               const SizedBox(height: 10),
               TextButton(
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterPetOwner())),
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterPetOwnerScreen())),
                 child: const Text('Register as Pet Owner'),
               ),
               TextButton(
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterServiceProvider())),
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterServiceProviderScreen())),
                 child: const Text('Register as Service Provider'),
               ),
             ],
