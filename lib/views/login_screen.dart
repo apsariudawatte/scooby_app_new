@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:scooby_app_new/services/auth_services.dart';
+import 'package:scooby_app_new/services/google_auth_service.dart';
 import 'package:scooby_app_new/views/register_pet_owner.dart';
 import 'package:scooby_app_new/views/register_service_provider.dart';
-
-
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,42 +15,60 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+
+  final AuthService _authService = AuthService();
+  final GoogleAuthService _googleAuthService = GoogleAuthService();
+
   bool _isLoading = false;
 
   Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    final user = await _authService.signInWithEmail(
+      _emailController.text.trim(),
+      _passwordController.text.trim(),
+    );
+
+    setState(() => _isLoading = false);
+
+    if (user != null) {
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/petOwnerHome');
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Login failed: Invalid email or password')),
+        );
+      }
+    }
   }
 
   Future<void> _signInWithGoogle() async {
-  setState(() => _isLoading = true);
+    setState(() => _isLoading = true);
 
-  try {
-    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-    if (googleUser == null) {
-      setState(() => _isLoading = false);
-      return;
-    }
+    final user = await _googleAuthService.signInWithGoogle();
 
-    final googleAuth = await googleUser.authentication;
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
+    setState(() => _isLoading = false);
 
-    await FirebaseAuth.instance.signInWithCredential(credential);
-
-    if (!mounted) return;
-    Navigator.pushReplacementNamed(context, '/petOwnerHome');
-  } catch (e) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Google Sign-In failed')),
-    );
-  } finally {
-    if (mounted) {
-      setState(() => _isLoading = false);
+    if (user != null) {
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/petOwnerHome');
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Google Sign-In failed')),
+        );
+      }
     }
   }
 
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -74,17 +90,20 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 30),
               TextFormField(
                 controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(labelText: 'Email'),
-                validator: (val) =>
-                    val != null && val.contains('@') ? null : 'Invalid email',
+                validator: (val) => val != null && val.contains('@')
+                    ? null
+                    : 'Please enter a valid email',
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _passwordController,
                 obscureText: true,
                 decoration: const InputDecoration(labelText: 'Password'),
-                validator: (val) =>
-                    val != null && val.length >= 8 ? null : 'Min 8 characters',
+                validator: (val) => val != null && val.length >= 8
+                    ? null
+                    : 'Password must be at least 8 characters',
               ),
               const SizedBox(height: 30),
               _isLoading
@@ -109,7 +128,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => const RegisterPetOwner()),
+                      builder: (_) => const RegisterPetOwner(),
+                    ),
                   );
                 },
                 child: const Text('Register as Pet Owner'),
@@ -119,7 +139,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => const RegisterServiceProvider()),
+                      builder: (_) => const RegisterServiceProvider(),
+                    ),
                   );
                 },
                 child: const Text('Register as Service Provider'),

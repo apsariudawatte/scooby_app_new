@@ -32,7 +32,7 @@ class ScoobyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/registerPetOwner': (context) => const RegisterPetOwner(),
         '/registerServiceProvider': (context) => const RegisterServiceProvider(),
-        '/petOwnerHome': (context) => const HomeScreen(),
+        '/Home': (context) => const HomeScreen(),
       },
     );
   }
