@@ -29,8 +29,8 @@ class ScoobyApp extends StatelessWidget {
       routes: {
         '/': (context) => const SplashScreen(),
         '/login': (context) => const LoginScreen(),
-        '/registerPetOwner': (context) => const RegisterPetOwnerScreen(),
-        '/registerServiceProvider': (context) => const RegisterServiceProviderScreen(),
+        '/registerPetOwner': (context) => const RegisterPetOwner(),
+        '/registerServiceProvider': (context) => const RegisterServiceProvider(),
         '/petOwnerHome': (context) => const HomeScreen(),
       },
     );
