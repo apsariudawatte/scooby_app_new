@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "694341470142",
+    "project_id": "scooby-app-new",
+    "storage_bucket": "scooby-app-new.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:694341470142:android:c10ef48c5141dae5d71bef",
+        "android_client_info": {
+          "package_name": "com.example.scooby_app_new"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBPyHjp5iGQ80lTeq6qZPqKFiSC5BV3bJo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
