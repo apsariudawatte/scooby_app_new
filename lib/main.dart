@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:scooby_app_new/firebase_options.dart';
 import 'package:scooby_app_new/views/home_screen.dart';
 import 'package:scooby_app_new/views/login_screen.dart';
 import 'package:scooby_app_new/views/register_pet_owner.dart';
@@ -8,7 +9,7 @@ import 'package:scooby_app_new/views/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const ScoobyApp());
 }
 

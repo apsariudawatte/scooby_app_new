@@ -1,4 +1,11 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.scooby_app_new">
+
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!-- For Android 13+, add this too -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
     <application
         android:label="scooby_app_new"
         android:name="${applicationName}"
@@ -16,6 +23,14 @@
                  the Android process has started. This theme is visible to the user
                  while the Flutter UI initializes. After that, this theme continues
                  to determine the Window background behind the Flutter UI. -->
+            <meta-data
+                android:name="com.google.android.gms.auth.api.signin.v2.REQUESTED_SCOPES"
+                android:value="email profile" />
+
+            <meta-data
+                android:name="com.google.android.gms.auth.api.signin.v2.REQUESTED_VISIBLE_ACTIVITIES"
+                android:value="http://schemas.google.com/AddActivity http://schemas.google.com/BuyActivity" />
+
             <meta-data
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
