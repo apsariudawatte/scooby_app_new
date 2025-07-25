@@ -3,13 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 class AuthController {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  Stream<User?> get userChanges => _auth.authStateChanges();
+  Stream<User?> get user => _auth.authStateChanges();
 
-  bool isLoggedIn() {
-    return _auth.currentUser != null;
-  }
+  User? get currentUser => _auth.currentUser;
 
-  String? getUserId() {
-    return _auth.currentUser?.uid;
+  Future<void> signOut() async {
+    await _auth.signOut();
   }
 }

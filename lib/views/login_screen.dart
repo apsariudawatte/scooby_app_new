@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:scooby_app_new/services/auth_services.dart';
 import 'package:scooby_app_new/services/google_auth_service.dart';
@@ -26,6 +27,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
 
+    // Clear stale auth state (Fixes repeated login issues)
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      await FirebaseAuth.instance.signOut();
+    }
+
+
     final user = await _authService.signInWithEmail(
       _emailController.text.trim(),
       _passwordController.text.trim(),
@@ -35,6 +43,27 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (user != null) {
       if (!mounted) return;
+
+      // Show popup dialog with logged in email
+      await showDialog(
+      context: context,
+      barrierDismissible: false, 
+      builder: (context) => AlertDialog(
+        title: const Text('Login Successful'),
+        content: Text('Logged in as ${user.email ?? 'Unknown'}'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          )
+        ],
+      ),
+    );
+
+
+      if (!mounted) return;
+
+      // Navigate to Pet Owner Home screen 
       Navigator.pushReplacementNamed(context, '/petOwnerHome');
     } else {
       if (mounted) {
@@ -54,6 +83,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (user != null) {
       if (!mounted) return;
+
+      // Show popup dialog with logged in email
+      await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Login Successful'),
+          content: Text('Logged in as ${user.email ?? 'Unknown'}'),
+        ),
+      );
+
+      if (!mounted) return;
+
       Navigator.pushReplacementNamed(context, '/petOwnerHome');
     } else {
       if (mounted) {
@@ -125,6 +166,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 10),
               TextButton(
                 onPressed: () {
+                  // Navigate to Pet Owner Register Screen
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -136,6 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               TextButton(
                 onPressed: () {
+                  // Navigate to Service Provider Register Screen
                   Navigator.push(
                     context,
                     MaterialPageRoute(
