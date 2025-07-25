@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:scooby_app_new/firebase_options.dart';
 import 'package:scooby_app_new/views/wrapper.dart';
 
@@ -18,7 +17,7 @@ class ScoobyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
+    return MaterialApp(
       title: 'Scooby App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(

@@ -62,12 +62,13 @@ class AuthService {
 
         return user;
       }
-    } catch (e) {
-       log('Register PetOwner Error: $e');
-      log('Stacktrace: $stacktrace');
+    } catch (e, stacktrace) {
+  log('Register PetOwner Error: $e');
+  log('Stacktrace: $stacktrace');
+  rethrow;  // <-- rethrow error so UI can catch it too
 }
     return null;
-  } 
+  }
 
   //  Register Service Provider
   Future<User?> registerServiceProvider({

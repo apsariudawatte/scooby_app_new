@@ -42,27 +42,38 @@ class _RegisterPetOwnerState extends State<RegisterPetOwner> {
       builder: (_) => const Center(child: CircularProgressIndicator()),
     );
 
-    final user = await _authService.registerPetOwner(
-      name: _nameController.text.trim(),
-      phone: _phoneController.text.trim(),
-      address: _addressController.text.trim(),
-      city: _selectedCity ?? '',
-      email: _emailController.text.trim(),
-      password: _passwordController.text.trim(),
-      profileImage: _image!, 
-    );
-
-    if (!mounted) return;
-    Navigator.pop(context);
-
-    if (user != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registration successful!')),
+    try {
+      final user = await _authService.registerPetOwner(
+        name: _nameController.text.trim(),
+        phone: _phoneController.text.trim(),
+        address: _addressController.text.trim(),
+        city: _selectedCity ?? '',
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+        profileImage: _image!,
       );
-      Navigator.pushReplacementNamed(context, '/login');
-    } else {
+
+      if (!mounted) return;
+      Navigator.pop(context); // Remove loading indicator
+
+      if (user != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Registration successful!')),
+        );
+        Navigator.pushReplacementNamed(context, '/login');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Registration failed. Try again.')),
+        );
+      }
+    } catch (e, stacktrace) {
+      Navigator.pop(context); // Remove loading indicator if error
+
+      print('Registration error: $e');
+      print('Stacktrace: $stacktrace');
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registration failed. Try again.')),
+        SnackBar(content: Text('Error occurred: $e')),
       );
     }
   } else {
