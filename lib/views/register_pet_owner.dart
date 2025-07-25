@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:scooby_app_new/services/auth_services.dart';
 
 class RegisterPetOwner extends StatefulWidget {
   const RegisterPetOwner({super.key});
@@ -18,6 +19,8 @@ class _RegisterPetOwnerState extends State<RegisterPetOwner> {
   final _cityController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
+
   File? _image;
   final List<String> _cities = [
     'Colombo', 'Kandy', 'Galle', 'Jaffna', 'Anuradhapura', 'Kurunegala'
@@ -31,18 +34,46 @@ class _RegisterPetOwnerState extends State<RegisterPetOwner> {
     }
   }
 
-  void _register() {
-    if (_formKey.currentState!.validate()) {
-      if (_image == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Please upload a profile picture")));
-        return;
-      }
+  void _register() async {
+  if (_formKey.currentState!.validate() && _image != null) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
 
-      // Firebase logic to create user goes here
-      Navigator.pushReplacementNamed(context, "/petOwnerHome");
+    final user = await _authService.registerPetOwner(
+      name: _nameController.text.trim(),
+      phone: _phoneController.text.trim(),
+      address: _addressController.text.trim(),
+      city: _selectedCity ?? '',
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+      profileImage: _image!, 
+    );
+
+    if (!mounted) return;
+    Navigator.pop(context);
+
+    if (user != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Registration successful!')),
+      );
+      Navigator.pushReplacementNamed(context, '/login');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Registration failed. Try again.')),
+      );
     }
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please fill all fields and select an image.')),
+    );
   }
+}
+
+
+
 
   @override
   Widget build(BuildContext context) {

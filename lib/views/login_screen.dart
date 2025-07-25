@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:scooby_app_new/services/auth_services.dart';
@@ -13,11 +14,11 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
-  final AuthService _authService = AuthService();
+  final AuthService authService = AuthService();
   final GoogleAuthService _googleAuthService = GoogleAuthService();
 
   bool _isLoading = false;
@@ -34,10 +35,12 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
 
-    final user = await _authService.signInWithEmail(
-      _emailController.text.trim(),
-      _passwordController.text.trim(),
-    );
+    User? user = await authService.signInWithEmail(
+  email: emailController.text.trim(),
+  password: passwordController.text.trim(),
+);
+
+
 
     setState(() => _isLoading = false);
 
@@ -105,10 +108,38 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> loginAndNavigate(String email, String password) async {
+  try {
+    final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+
+    final uid = userCredential.user!.uid;
+    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final role = doc['role'];
+
+    if (role == 'pet_owner') {
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/petOwnerHome');
+    } else if (role == 'service_provider') {
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/serviceProviderHome');
+    }
+  } catch (e) {
+    ('Login Error: $e');
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Login failed')),
+    );
+  }
+}
+
+
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
     super.dispose();
   }
 
@@ -130,7 +161,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 30),
               TextFormField(
-                controller: _emailController,
+                controller: emailController,
                 keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(labelText: 'Email'),
                 validator: (val) => val != null && val.contains('@')
@@ -139,7 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _passwordController,
+                controller: passwordController,
                 obscureText: true,
                 decoration: const InputDecoration(labelText: 'Password'),
                 validator: (val) => val != null && val.length >= 8

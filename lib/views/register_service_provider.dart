@@ -1,5 +1,11 @@
-// register_service_provider.dart
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:scooby_app_new/views/login_screen.dart';
 
 class RegisterServiceProvider extends StatefulWidget {
   const RegisterServiceProvider({super.key});
@@ -11,135 +17,162 @@ class RegisterServiceProvider extends StatefulWidget {
 class _RegisterServiceProviderState extends State<RegisterServiceProvider> {
   final _formKey = GlobalKey<FormState>();
 
-  final List<String> roles = ['Veterinarian', 'Groomer', 'Pet Sitter'];
-  final List<String> cities = [
-    'Colombo', 'Kandy', 'Galle', 'Jaffna', 'Kurunegala', 'Negombo', 'Matara'
-  ];
+  final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _experienceController = TextEditingController();
 
-  String? _selectedRole;
+  File? _selectedImage;
+  File? _selectedQualification;
   String? _selectedCity;
+
+  final List<String> _cities = ['Colombo', 'Kandy', 'Galle', 'Jaffna'];
+
+  Future<void> _pickProfileImage() async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (picked != null) {
+      setState(() => _selectedImage = File(picked.path));
+    }
+  }
+
+  Future<void> _pickQualificationFile() async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (picked != null) {
+      setState(() => _selectedQualification = File(picked.path));
+    }
+  }
+
+  Future<void> _register() async {
+    if (_formKey.currentState!.validate()) {
+      if (_selectedImage == null || _selectedQualification == null || _selectedCity == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please complete all fields including image, qualification and city.')),
+        );
+        return;
+      }
+
+      try {
+        final auth = FirebaseAuth.instance;
+        final userCredential = await auth.createUserWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+
+        final uid = userCredential.user!.uid;
+
+        final profileRef = FirebaseStorage.instance.ref('profiles/$uid.jpg');
+        await profileRef.putFile(_selectedImage!);
+        final profileUrl = await profileRef.getDownloadURL();
+
+        final qualificationRef = FirebaseStorage.instance.ref('qualifications/$uid.jpg');
+        await qualificationRef.putFile(_selectedQualification!);
+        final qualificationUrl = await qualificationRef.getDownloadURL();
+
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'role': 'service_provider',
+          'name': _nameController.text.trim(),
+          'phone': _phoneController.text.trim(),
+          'address': _addressController.text.trim(),
+          'email': _emailController.text.trim(),
+          'city': _selectedCity,
+          'description': _descriptionController.text.trim(),
+          'experience': _experienceController.text.trim(),
+          'profileImage': profileUrl,
+          'qualificationFile': qualificationUrl,
+        });
+
+        if (!mounted) return;
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Registration failed: $e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
-                Image.asset(
-                  'assets/logo.png',
-                  height: 80,
+      appBar: AppBar(title: const Text("Register as Service Provider")),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: 'Full Name'),
+                validator: (value) => value!.isEmpty ? 'Name is required' : null,
+              ),
+              TextFormField(
+                controller: _phoneController,
+                decoration: const InputDecoration(labelText: 'Phone Number'),
+                validator: (value) => value!.isEmpty ? 'Phone is required' : null,
+              ),
+              TextFormField(
+                controller: _addressController,
+                decoration: const InputDecoration(labelText: 'Address'),
+                validator: (value) => value!.isEmpty ? 'Address is required' : null,
+              ),
+              DropdownButtonFormField<String>(
+                value: _selectedCity,
+                decoration: const InputDecoration(labelText: 'City'),
+                items: _cities.map((city) {
+                  return DropdownMenuItem(value: city, child: Text(city));
+                }).toList(),
+                onChanged: (value) => setState(() => _selectedCity = value),
+                validator: (value) => value == null ? 'City is required' : null,
+              ),
+              TextFormField(
+                controller: _emailController,
+                decoration: const InputDecoration(labelText: 'Email'),
+                validator: (value) => value!.isEmpty ? 'Email is required' : null,
+              ),
+              TextFormField(
+                controller: _passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'Password'),
+                validator: (value) => value!.length < 6 ? 'Password must be 6+ chars' : null,
+              ),
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(labelText: 'Service Description'),
+                maxLines: 3,
+                validator: (value) => value!.isEmpty ? 'Description required' : null,
+              ),
+              TextFormField(
+                controller: _experienceController,
+                decoration: const InputDecoration(labelText: 'Experience'),
+                validator: (value) => value!.isEmpty ? 'Experience required' : null,
+              ),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: _pickProfileImage,
+                child: const Text('Upload Profile Image'),
+              ),
+              if (_selectedImage != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Image.file(_selectedImage!, height: 100),
                 ),
-                const SizedBox(height: 10),
-                const Text(
-                  'Create An Account',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ElevatedButton(
+                onPressed: _pickQualificationFile,
+                child: const Text('Upload Qualification File'),
+              ),
+              const SizedBox(height: 20),
+              Center(
+                child: ElevatedButton(
+                  onPressed: _register,
+                  child: const Text("Register"),
                 ),
-                const SizedBox(height: 20),
-                const CircleAvatar(
-                  radius: 40,
-                  backgroundColor: Colors.grey,
-                  child: Icon(Icons.add_a_photo, size: 30, color: Colors.white),
-                ),
-                const SizedBox(height: 20),
-                TextFormField(
-                  decoration: const InputDecoration(labelText: 'Full Name'),
-                  validator: (value) => value!.isEmpty ? 'Name is required' : null,
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: _selectedRole,
-                  hint: const Text('Role'),
-                  onChanged: (value) => setState(() => _selectedRole = value),
-                  validator: (value) => value == null ? 'Role is required' : null,
-                  items: roles
-                      .map((role) => DropdownMenuItem(value: role, child: Text(role)))
-                      .toList(),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(labelText: 'Phone Number'),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return 'Phone number required';
-                    if (!RegExp(r'^\d{10}\$').hasMatch(value)) return 'Enter 10 digit number';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  decoration: const InputDecoration(labelText: 'Address'),
-                  validator: (value) => value!.isEmpty ? 'Address is required' : null,
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: _selectedCity,
-                  hint: const Text('Main City'),
-                  onChanged: (value) => setState(() => _selectedCity = value),
-                  validator: (value) => value == null ? 'City is required' : null,
-                  items: cities
-                      .map((city) => DropdownMenuItem(value: city, child: Text(city)))
-                      .toList(),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(labelText: 'Email Address'),
-                  validator: (value) {
-                    if (value == null || !value.contains('@')) return 'Enter valid email';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Password'),
-                  validator: (value) => value != null && value.length >= 8 ? null : 'Min 8 characters',
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  decoration: const InputDecoration(labelText: 'Description About Yourself'),
-                  validator: (value) => value!.isEmpty ? 'Description required' : null,
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    const Icon(Icons.file_upload),
-                    const SizedBox(width: 8),
-                    const Text('Upload Qualification (PDF or Image)', style: TextStyle(fontSize: 14)),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () {},
-                      child: const Text('Browse'),
-                    )
-                  ],
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  decoration: const InputDecoration(labelText: 'Experience'),
-                  validator: (value) => value!.isEmpty ? 'Experience required' : null,
-                ),
-                const SizedBox(height: 30),
-                ElevatedButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Registration Pending Approval by Admin')),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4B0082),
-                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 50),
-                  ),
-                  child: const Text('Register', style: TextStyle(color: Colors.white)),
-                ),
-              ],
-            ),
+              )
+            ],
           ),
         ),
       ),
