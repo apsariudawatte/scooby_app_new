@@ -43,8 +43,8 @@ class PetOwnerProfileScreen extends StatelessWidget {
             child: ListView(
               children: [
                 const CircleAvatar(
-                  radius: 50,
-                  backgroundImage: AssetImage('assets/images/profile.png'),
+                  radius: 150,
+                  backgroundImage: AssetImage('assets/images/profile.jpeg'),
                 ),
                 const SizedBox(height: 20),
                 Text("Name: ${user.name}", style: const TextStyle(fontSize: 18)),

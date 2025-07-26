@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:scooby_app_new/controllers/home_controller.dart';
 import 'package:scooby_app_new/views/adoption_screen.dart';
+import 'package:scooby_app_new/views/bottom_nav.dart';
 import 'package:scooby_app_new/views/community_screen.dart';
 import 'package:scooby_app_new/views/pet_owner_profile_screen.dart';
-
 import 'package:scooby_app_new/views/services_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -18,7 +18,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
-    const Center(child: Text('Welcome')), 
+    const Center(child: Text('Welcome')),
     const ServicesScreen(),
     const AdoptionScreen(),
     const CommunityScreen(),
@@ -56,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         leading: IconButton(
           icon: const CircleAvatar(
-            backgroundImage: AssetImage('assets/images/profile.png'),
+            backgroundImage: AssetImage('assets/images/profile.jpeg'),
           ),
           onPressed: _goToProfile,
         ),
@@ -71,17 +71,9 @@ class _HomeScreenState extends State<HomeScreen> {
         index: _selectedIndex,
         children: _screens,
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        selectedItemColor: const Color(0xFF6A0DAD),
-        unselectedItemColor: Colors.grey,
-        currentIndex: _selectedIndex,
+      bottomNavigationBar: BottomNav( 
+        selectedIndex: _selectedIndex,
         onTap: _onItemTapped,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.pets), label: 'Services'),
-          BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Adoption'),
-          BottomNavigationBarItem(icon: Icon(Icons.group), label: 'Community'),
-        ],
       ),
     );
   }
