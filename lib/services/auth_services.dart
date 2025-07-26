@@ -48,7 +48,7 @@ class AuthService {
       if (user != null) {
         String imageUrl = await _uploadImage(user.uid, profileImage);
 
-        await _firestore.collection('users').doc(user.uid).set({
+        await _firestore.collection('pet_owners').doc(user.uid).set({
           'uid': user.uid,
           'role': 'pet_owner',
           'name': name,
@@ -59,13 +59,14 @@ class AuthService {
           'imageUrl': imageUrl,
           'createdAt': FieldValue.serverTimestamp(),
         });
+        log('Saved pet owner data to Firestore for UID: ${user.uid}');
 
         return user;
       }
     } catch (e, stacktrace) {
   log('Register PetOwner Error: $e');
   log('Stacktrace: $stacktrace');
-  rethrow;  // <-- rethrow error so UI can catch it too
+  rethrow;  
 }
     return null;
   }
@@ -119,6 +120,7 @@ class AuthService {
           'status': 'pending', // Admin approval pending
           'createdAt': FieldValue.serverTimestamp(),
         });
+        log('Saved pet service provider data to Firestore for UID: ${user.uid}');
 
         return user;
       }
@@ -142,3 +144,14 @@ class AuthService {
     return await ref.getDownloadURL();
   }
 }
+
+Future<String?> getUserRole(String uid) async {
+  final petOwnerDoc = await FirebaseFirestore.instance.collection('pet_owners').doc(uid).get();
+  if (petOwnerDoc.exists) return 'pet_owner';
+
+  final providerDoc = await FirebaseFirestore.instance.collection('service_providers').doc(uid).get();
+  if (providerDoc.exists) return 'service_provider';
+
+  return null;
+}
+

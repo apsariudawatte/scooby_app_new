@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:scooby_app_new/services/auth_services.dart';
+import 'package:scooby_app_new/views/login_screen.dart';
 
 class RegisterPetOwner extends StatefulWidget {
   const RegisterPetOwner({super.key});
@@ -54,28 +55,27 @@ class _RegisterPetOwnerState extends State<RegisterPetOwner> {
       );
 
       if (!mounted) return;
-      Navigator.pop(context); // Remove loading indicator
+      Navigator.of(context).pop(); 
 
       if (user != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registration successful!')),
-        );
-        Navigator.pushReplacementNamed(context, '/login');
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registration failed. Try again.')),
-        );
-      }
-    } catch (e, stacktrace) {
-      Navigator.pop(context); // Remove loading indicator if error
-
-      print('Registration error: $e');
-      print('Stacktrace: $stacktrace');
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error occurred: $e')),
-      );
-    }
+       ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Registered successfully. Please log in.')),
+    );
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Registration failed.')),
+    );
+  }
+} catch (e) {
+  Navigator.of(context).pop(); // dismiss loading
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text('Error: $e')),
+  );
+}
   } else {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Please fill all fields and select an image.')),

@@ -1,11 +1,7 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:scooby_app_new/views/login_screen.dart';
+import 'package:scooby_app_new/services/auth_services.dart';
 
 class RegisterServiceProvider extends StatefulWidget {
   const RegisterServiceProvider({super.key});
@@ -16,163 +12,167 @@ class RegisterServiceProvider extends StatefulWidget {
 
 class _RegisterServiceProviderState extends State<RegisterServiceProvider> {
   final _formKey = GlobalKey<FormState>();
-
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
+  final _cityController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _descriptionController = TextEditingController();
   final _experienceController = TextEditingController();
+ final _descriptionController = TextEditingController();
 
-  File? _selectedImage;
-  File? _selectedQualification;
-  String? _selectedCity;
+  File? _profileImage;
 
-  final List<String> _cities = ['Colombo', 'Kandy', 'Galle', 'Jaffna'];
+  final List<String> _roles = ['Groomer', 'Trainer', 'Vet'];
+  String? _selectedRole;
 
-  Future<void> _pickProfileImage() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() => _selectedImage = File(picked.path));
-    }
-  }
-
-  Future<void> _pickQualificationFile() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() => _selectedQualification = File(picked.path));
+  Future<void> _pickImage() async {
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _profileImage = File(pickedFile.path);
+      });
     }
   }
 
   Future<void> _register() async {
     if (_formKey.currentState!.validate()) {
-      if (_selectedImage == null || _selectedQualification == null || _selectedCity == null) {
+      if (_profileImage == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please complete all fields including image, qualification and city.')),
+          const SnackBar(content: Text('Please select a profile image')),
         );
         return;
       }
 
-      try {
-        final auth = FirebaseAuth.instance;
-        final userCredential = await auth.createUserWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-        );
-
-        final uid = userCredential.user!.uid;
-
-        final profileRef = FirebaseStorage.instance.ref('profiles/$uid.jpg');
-        await profileRef.putFile(_selectedImage!);
-        final profileUrl = await profileRef.getDownloadURL();
-
-        final qualificationRef = FirebaseStorage.instance.ref('qualifications/$uid.jpg');
-        await qualificationRef.putFile(_selectedQualification!);
-        final qualificationUrl = await qualificationRef.getDownloadURL();
-
-        await FirebaseFirestore.instance.collection('users').doc(uid).set({
-          'role': 'service_provider',
-          'name': _nameController.text.trim(),
-          'phone': _phoneController.text.trim(),
-          'address': _addressController.text.trim(),
-          'email': _emailController.text.trim(),
-          'city': _selectedCity,
-          'description': _descriptionController.text.trim(),
-          'experience': _experienceController.text.trim(),
-          'profileImage': profileUrl,
-          'qualificationFile': qualificationUrl,
-        });
-
-        if (!mounted) return;
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
-      } catch (e) {
+      if (_selectedRole == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Registration failed: $e')),
+          const SnackBar(content: Text('Please select a role')),
+        );
+        return;
+      }
+
+      final user = await AuthService().registerServiceProvider(
+        name: _nameController.text,
+        phone: _phoneController.text,
+        address: _addressController.text,
+        city: _cityController.text,
+        email: _emailController.text,
+        password: _passwordController.text,
+        profileImage: _profileImage!,
+        role: _selectedRole!,
+        experience: _experienceController.text.trim(),
+        description: _descriptionController.text.trim(),
+      );
+
+      if (user != null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Registered successfully. Please log in.')),
+        );
+        Navigator.pushReplacementNamed(context, '/login');
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Registration failed')),
         );
       }
     }
   }
 
   @override
+  void dispose() {
+    _nameController.dispose();
+  _phoneController.dispose();
+  _addressController.dispose();
+  _cityController.dispose();
+  _emailController.dispose();
+  _passwordController.dispose();
+  _descriptionController.dispose();
+  _experienceController.dispose();
+  super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Register as Service Provider")),
-      body: SingleChildScrollView(
+      appBar: AppBar(title: const Text('Register as Service Provider')),
+      body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Full Name'),
-                validator: (value) => value!.isEmpty ? 'Name is required' : null,
-              ),
-              TextFormField(
-                controller: _phoneController,
-                decoration: const InputDecoration(labelText: 'Phone Number'),
-                validator: (value) => value!.isEmpty ? 'Phone is required' : null,
-              ),
-              TextFormField(
-                controller: _addressController,
-                decoration: const InputDecoration(labelText: 'Address'),
-                validator: (value) => value!.isEmpty ? 'Address is required' : null,
-              ),
-              DropdownButtonFormField<String>(
-                value: _selectedCity,
-                decoration: const InputDecoration(labelText: 'City'),
-                items: _cities.map((city) {
-                  return DropdownMenuItem(value: city, child: Text(city));
-                }).toList(),
-                onChanged: (value) => setState(() => _selectedCity = value),
-                validator: (value) => value == null ? 'City is required' : null,
-              ),
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
-                validator: (value) => value!.isEmpty ? 'Email is required' : null,
-              ),
-              TextFormField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: 'Password'),
-                validator: (value) => value!.length < 6 ? 'Password must be 6+ chars' : null,
-              ),
-              TextFormField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Service Description'),
-                maxLines: 3,
-                validator: (value) => value!.isEmpty ? 'Description required' : null,
-              ),
-              TextFormField(
-                controller: _experienceController,
-                decoration: const InputDecoration(labelText: 'Experience'),
-                validator: (value) => value!.isEmpty ? 'Experience required' : null,
-              ),
-              const SizedBox(height: 10),
-              ElevatedButton(
-                onPressed: _pickProfileImage,
-                child: const Text('Upload Profile Image'),
-              ),
-              if (_selectedImage != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Image.file(_selectedImage!, height: 100),
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: CircleAvatar(
+                    radius: 50,
+                    backgroundImage: _profileImage != null ? FileImage(_profileImage!) : null,
+                    child: _profileImage == null ? const Icon(Icons.camera_alt, size: 40) : null,
+                  ),
                 ),
-              ElevatedButton(
-                onPressed: _pickQualificationFile,
-                child: const Text('Upload Qualification File'),
-              ),
-              const SizedBox(height: 20),
-              Center(
-                child: ElevatedButton(
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(labelText: 'Name'),
+                  validator: (value) => value!.isEmpty ? 'Name is required' : null,
+                ),
+                TextFormField(
+                  controller: _phoneController,
+                  decoration: const InputDecoration(labelText: 'Phone'),
+                  keyboardType: TextInputType.phone,
+                  validator: (value) => value!.isEmpty ? 'Phone number is required' : null,
+                ),
+                TextFormField(
+                  controller: _addressController,
+                  decoration: const InputDecoration(labelText: 'Address'),
+                  validator: (value) => value!.isEmpty ? 'Address is required' : null,
+                ),
+                TextFormField(
+                  controller: _cityController,
+                  decoration: const InputDecoration(labelText: 'City'),
+                  validator: (value) => value!.isEmpty ? 'City is required' : null,
+                ),
+                DropdownButtonFormField<String>(
+                  value: _selectedRole,
+                  decoration: const InputDecoration(labelText: 'Service Role'),
+                  items: _roles.map((role) {
+                    return DropdownMenuItem(value: role, child: Text(role));
+                  }).toList(),
+                  onChanged: (value) => setState(() => _selectedRole = value),
+                  validator: (value) => value == null ? 'Role is required' : null,
+                ),
+                TextFormField(
+                  controller: _descriptionController,
+                  decoration: const InputDecoration(labelText: 'Service Description'),
+                  maxLines: 3,
+                  validator: (value) => value!.isEmpty ? 'Description is required' : null,
+                ),
+                TextFormField(
+                  controller: _experienceController,
+                  decoration: const InputDecoration(labelText: 'Experience (e.g. 2 years)'),
+                  validator: (value) => value!.isEmpty ? 'Experience is required' : null,
+                ),
+
+                TextFormField(
+                  controller: _emailController,
+                  decoration: const InputDecoration(labelText: 'Email'),
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (value) => value!.isEmpty ? 'Email is required' : null,
+                ),
+                TextFormField(
+                  controller: _passwordController,
+                  decoration: const InputDecoration(labelText: 'Password'),
+                  obscureText: true,
+                  validator: (value) => value!.length < 6 ? 'Password must be at least 6 characters' : null,
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
                   onPressed: _register,
-                  child: const Text("Register"),
+                  child: const Text('Register'),
                 ),
-              )
-            ],
+              ],
+            ),
           ),
         ),
       ),
