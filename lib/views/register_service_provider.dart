@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:scooby_app_new/services/auth_services.dart';
+import 'package:scooby_app_new/views/login_screen.dart';
 
 class RegisterServiceProvider extends StatefulWidget {
   const RegisterServiceProvider({super.key});
@@ -22,23 +23,23 @@ class _RegisterServiceProviderState extends State<RegisterServiceProvider> {
   final List<String> _roles = ['Veterinarian', 'Pet Sitter', 'Pet Groomer'];
   String? _selectedRole;
 
-  Future<void> _register() async {
-    if (_formKey.currentState!.validate()) {
-      if (_selectedRole == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select a role')),
-        );
-        return;
-      }
+Future<void> _register() async {
+  if (_formKey.currentState!.validate()) {
+    if (_selectedRole == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a role')),
+      );
+      return;
+    }
 
+    try {
       final user = await AuthService().registerServiceProvider(
         name: _nameController.text,
         phone: _phoneController.text,
         address: _addressController.text,
         city: _cityController.text,
-        email: _emailController.text,
+        email: _emailController.text.trim(),
         password: _passwordController.text,
-        // Removed profileImage here
         role: _selectedRole!,
         experience: _experienceController.text.trim(),
         description: _descriptionController.text.trim(),
@@ -49,15 +50,25 @@ class _RegisterServiceProviderState extends State<RegisterServiceProvider> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Registered successfully. Please log in.')),
         );
-        Navigator.pushReplacementNamed(context, '/login');
+        Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+          );
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registration failed')),
+          const SnackBar(content: Text('Registration failed. Please try again.')),
         );
       }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
     }
   }
+}
+
 
   @override
   void dispose() {
@@ -136,7 +147,7 @@ class _RegisterServiceProviderState extends State<RegisterServiceProvider> {
                   controller: _passwordController,
                   decoration: const InputDecoration(labelText: 'Password'),
                   obscureText: true,
-                  validator: (value) => value!.length < 6 ? 'Password must be at least 6 characters' : null,
+                  validator: (value) => value!.length < 6 ? 'Password must be at least 8 characters' : null,
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
