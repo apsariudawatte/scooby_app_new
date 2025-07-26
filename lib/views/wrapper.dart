@@ -10,11 +10,13 @@ class Wrapper extends StatelessWidget {
   const Wrapper({super.key});
 
   Future<String?> getUserRole(String uid) async {
-    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-    if (doc.exists && doc.data()!.containsKey('role')) {
-      return doc['role'];
-    }
-    return null;
+    final petOwnerDoc = await FirebaseFirestore.instance.collection('pet_owners').doc(uid).get();
+    if (petOwnerDoc.exists) return 'pet_owner';
+
+    final serviceProviderDoc = await FirebaseFirestore.instance.collection('service_providers').doc(uid).get();
+    if (serviceProviderDoc.exists) return 'service_provider';
+
+    return null; // user not found in either collection
   }
 
   @override
@@ -26,10 +28,8 @@ class Wrapper extends StatelessWidget {
           final user = snapshot.data;
 
           if (user == null) {
-            // Not logged in, show Login screen
             return const LoginScreen();
           } else {
-            // Logged in, check role and route accordingly
             return FutureBuilder<String?>(
               future: getUserRole(user.uid),
               builder: (context, roleSnapshot) {
@@ -42,15 +42,17 @@ class Wrapper extends StatelessWidget {
 
                 if (role == 'service_provider') {
                   return const ServiceProviderHomeScreen();
-                } else {
-                  // default to pet owner home
+                } else if (role == 'pet_owner') {
                   return const HomeScreen();
+                } else {
+                  // User not found in either collection, force logout or show error
+                  return const LoginScreen();
                 }
               },
             );
           }
         }
-        // Loading auth state
+
         return const Scaffold(
           body: Center(child: CircularProgressIndicator()),
         );

@@ -8,10 +8,8 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
-  
-  get stacktrace => null;
 
- 
+  // Sign In Method
   Future<User?> signInWithEmail({
     required String email,
     required String password,
@@ -22,13 +20,16 @@ class AuthService {
         password: password,
       );
       return result.user;
+    } on FirebaseAuthException catch (e) {
+      log('Login Error [${e.code}]: ${e.message}');
+      rethrow;
     } catch (e) {
-      ('Login Error: $e');
-      return null;
+      log('Unexpected login error: $e');
+      rethrow;
     }
   }
 
-  //  Register Pet Owner
+  // Register Pet Owner
   Future<User?> registerPetOwner({
     required String name,
     required String phone,
@@ -36,7 +37,7 @@ class AuthService {
     required String city,
     required String email,
     required String password,
-    required File profileImage,
+    File? profileImage,
   }) async {
     try {
       UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
@@ -46,7 +47,10 @@ class AuthService {
       User? user = userCredential.user;
 
       if (user != null) {
-        String imageUrl = await _uploadImage(user.uid, profileImage);
+        String? imageUrl;
+        if (profileImage != null) {
+          imageUrl = await _uploadImage(user.uid, profileImage);
+        }
 
         await _firestore.collection('pet_owners').doc(user.uid).set({
           'uid': user.uid,
@@ -63,15 +67,19 @@ class AuthService {
 
         return user;
       }
+    } on FirebaseAuthException catch (e, stacktrace) {
+      log('Register PetOwner Error [${e.code}]: ${e.message}');
+      log('Stacktrace: $stacktrace');
+      rethrow;
     } catch (e, stacktrace) {
-  log('Register PetOwner Error: $e');
-  log('Stacktrace: $stacktrace');
-  rethrow;  
-}
+      log('Unexpected registration error: $e');
+      log('Stacktrace: $stacktrace');
+      rethrow;
+    }
     return null;
   }
 
-  //  Register Service Provider
+  // Register Service Provider
   Future<User?> registerServiceProvider({
     required String name,
     required String role,
@@ -117,41 +125,53 @@ class AuthService {
           'experience': experience,
           'imageUrl': imageUrl,
           'qualificationUrl': qualificationUrl,
-          'status': 'pending', // Admin approval pending
+          'status': 'pending',
           'createdAt': FieldValue.serverTimestamp(),
         });
-        log('Saved pet service provider data to Firestore for UID: ${user.uid}');
+        log('Saved service provider data to Firestore for UID: ${user.uid}');
 
         return user;
       }
-    } catch (e) {
-      ('Register ServiceProvider Error: $e');
+    } on FirebaseAuthException catch (e, stacktrace) {
+      log('Register ServiceProvider Error [${e.code}]: ${e.message}');
+      log('Stacktrace: $stacktrace');
+      rethrow;
+    } catch (e, stacktrace) {
+      log('Unexpected registration error: $e');
+      log('Stacktrace: $stacktrace');
+      rethrow;
     }
     return null;
   }
 
-  //  Image Upload Helper
   Future<String> _uploadImage(String uid, File file) async {
     final ref = _storage.ref().child('profile_images/$uid.jpg');
-    await ref.putFile(file);
+    final metadata = SettableMetadata(
+      contentType: 'image/jpeg',
+      cacheControl: 'max-age=3600',
+    );
+    await ref.putFile(file, metadata);
     return await ref.getDownloadURL();
   }
 
-  // File Upload Helper
   Future<String> _uploadFile(String uid, File file) async {
-    final ref = _storage.ref().child('qualifications/$uid-${file.path.split('/').last}');
-    await ref.putFile(file);
+    final fileName = file.path.split('/').last;
+    final ref = _storage.ref().child('qualifications/$uid-$fileName');
+    final metadata = SettableMetadata(
+      contentType: 'application/octet-stream',
+      cacheControl: 'max-age=3600',
+    );
+    await ref.putFile(file, metadata);
     return await ref.getDownloadURL();
   }
+
+  Future<String?> getUserRole(String uid) async {
+    final petOwnerDoc = await FirebaseFirestore.instance.collection('pet_owners').doc(uid).get();
+    if (petOwnerDoc.exists) return 'pet_owner';
+
+    final providerDoc = await FirebaseFirestore.instance.collection('service_providers').doc(uid).get();
+    if (providerDoc.exists) return 'service_provider';
+
+    return null;
+  }
 }
-
-Future<String?> getUserRole(String uid) async {
-  final petOwnerDoc = await FirebaseFirestore.instance.collection('pet_owners').doc(uid).get();
-  if (petOwnerDoc.exists) return 'pet_owner';
-
-  final providerDoc = await FirebaseFirestore.instance.collection('service_providers').doc(uid).get();
-  if (providerDoc.exists) return 'service_provider';
-
-  return null;
-}
-

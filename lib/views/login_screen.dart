@@ -1,12 +1,15 @@
 // ignore_for_file: use_build_context_synchronously
 
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:scooby_app_new/services/auth_services.dart';
 import 'package:scooby_app_new/services/google_auth_service.dart';
+import 'package:scooby_app_new/views/home_screen.dart';
 import 'package:scooby_app_new/views/register_pet_owner.dart';
 import 'package:scooby_app_new/views/register_service_provider.dart';
+import 'package:scooby_app_new/views/service_provider_home.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -57,92 +60,41 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _loginAndRoute() async {
-  if (!_formKey.currentState!.validate()) return;
-
-  setState(() => _isLoading = true);
-
+  Future<void> _loginAndRoute(User user) async {
   try {
-    final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-      email: emailController.text.trim(),
-      password: passwordController.text.trim(),
-    );
+    final petOwnerDoc = await FirebaseFirestore.instance
+        .collection('pet_owners')
+        .doc(user.uid)
+        .get();
 
-    final user = userCredential.user;
-    if (user == null) {
-      throw FirebaseAuthException(code: 'user-null', message: 'User not found');
-    }
+    final serviceProviderDoc = await FirebaseFirestore.instance
+        .collection('service_providers')
+        .doc(user.uid)
+        .get();
 
-    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-
-    if (!doc.exists || !doc.data()!.containsKey('role')) {
-      throw FirebaseAuthException(code: 'no-role', message: 'User role not defined');
-    }
-
-    final role = doc.get('role');
-
-    // ✅ Show popup on success
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('Login Successful'),
-        content: Text('Logged in as ${user.email ?? 'Unknown'}'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          )
-        ],
-      ),
-    );
-
-    if (!mounted) return;
-
-    // ✅ Navigate based on role
-    if (role == 'pet_owner') {
-      Navigator.pushReplacementNamed(context, '/petOwnerHome');
-    } else if (role == 'service_provider') {
-      Navigator.pushReplacementNamed(context, '/serviceProviderHome');
+    if (petOwnerDoc.exists) {
+      // Navigate to Pet Owner Home
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+      );
+    } else if (serviceProviderDoc.exists) {
+      // Navigate to Service Provider Home
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const ServiceProviderHomeScreen()),
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unknown role')),
+        const SnackBar(content: Text("User not found in either collection.")),
       );
     }
-  } on FirebaseAuthException catch (e) {
-    String message;
-    switch (e.code) {
-      case 'user-not-found':
-        message = 'No user found for that email.';
-        break;
-      case 'wrong-password':
-        message = 'Incorrect password.';
-        break;
-      case 'invalid-email':
-        message = 'Invalid email address.';
-        break;
-      case 'user-disabled':
-        message = 'User account is disabled.';
-        break;
-      case 'no-role':
-        message = 'User role not found in database.';
-        break;
-      default:
-        message = 'Login failed. Please try again.';
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
   } catch (e) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error: ${e.toString()}')),
+      SnackBar(content: Text("Error retrieving user role: $e")),
     );
-  } finally {
-    if (mounted) setState(() => _isLoading = false);
   }
 }
-
 
   
 
@@ -191,7 +143,32 @@ class _LoginScreenState extends State<LoginScreen> {
               _isLoading
                   ? const CircularProgressIndicator()
                   : ElevatedButton(
-                      onPressed: _loginAndRoute,
+                      onPressed: () async {
+                      if (_formKey.currentState!.validate()) {
+                        setState(() => _isLoading = true);
+
+                        try {
+                          final UserCredential userCredential = await FirebaseAuth.instance
+                              .signInWithEmailAndPassword(
+                            email: emailController.text.trim(),
+                            password: passwordController.text.trim(),
+                          );
+
+                          final user = userCredential.user;
+
+                          if (user != null) {
+                            await _loginAndRoute(user);
+                          }
+                        } on FirebaseAuthException catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(e.message ?? 'Login failed')),
+                          );
+                        } finally {
+                          setState(() => _isLoading = false);
+                        }
+                      }
+                    },
+                    
                       child: const Text('Login'),
                     ),
               const SizedBox(height: 20),

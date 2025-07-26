@@ -1,6 +1,4 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:scooby_app_new/services/auth_services.dart';
 
 class RegisterServiceProvider extends StatefulWidget {
@@ -19,31 +17,13 @@ class _RegisterServiceProviderState extends State<RegisterServiceProvider> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _experienceController = TextEditingController();
- final _descriptionController = TextEditingController();
+  final _descriptionController = TextEditingController();
 
-  File? _profileImage;
-
-  final List<String> _roles = ['Groomer', 'Trainer', 'Vet'];
+  final List<String> _roles = ['Veterinarian', 'Pet Sitter', 'Pet Groomer'];
   String? _selectedRole;
-
-  Future<void> _pickImage() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() {
-        _profileImage = File(pickedFile.path);
-      });
-    }
-  }
 
   Future<void> _register() async {
     if (_formKey.currentState!.validate()) {
-      if (_profileImage == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select a profile image')),
-        );
-        return;
-      }
-
       if (_selectedRole == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please select a role')),
@@ -58,7 +38,7 @@ class _RegisterServiceProviderState extends State<RegisterServiceProvider> {
         city: _cityController.text,
         email: _emailController.text,
         password: _passwordController.text,
-        profileImage: _profileImage!,
+        // Removed profileImage here
         role: _selectedRole!,
         experience: _experienceController.text.trim(),
         description: _descriptionController.text.trim(),
@@ -82,14 +62,14 @@ class _RegisterServiceProviderState extends State<RegisterServiceProvider> {
   @override
   void dispose() {
     _nameController.dispose();
-  _phoneController.dispose();
-  _addressController.dispose();
-  _cityController.dispose();
-  _emailController.dispose();
-  _passwordController.dispose();
-  _descriptionController.dispose();
-  _experienceController.dispose();
-  super.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    _cityController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _descriptionController.dispose();
+    _experienceController.dispose();
+    super.dispose();
   }
 
   @override
@@ -103,15 +83,8 @@ class _RegisterServiceProviderState extends State<RegisterServiceProvider> {
             key: _formKey,
             child: Column(
               children: [
-                GestureDetector(
-                  onTap: _pickImage,
-                  child: CircleAvatar(
-                    radius: 50,
-                    backgroundImage: _profileImage != null ? FileImage(_profileImage!) : null,
-                    child: _profileImage == null ? const Icon(Icons.camera_alt, size: 40) : null,
-                  ),
-                ),
-                const SizedBox(height: 20),
+                // Removed image picker widget here
+
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(labelText: 'Name'),
@@ -153,7 +126,6 @@ class _RegisterServiceProviderState extends State<RegisterServiceProvider> {
                   decoration: const InputDecoration(labelText: 'Experience (e.g. 2 years)'),
                   validator: (value) => value!.isEmpty ? 'Experience is required' : null,
                 ),
-
                 TextFormField(
                   controller: _emailController,
                   decoration: const InputDecoration(labelText: 'Email'),
