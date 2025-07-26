@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:scooby_app_new/controllers/home_controller.dart';
+import 'package:scooby_app_new/views/adoption_screen.dart';
+import 'package:scooby_app_new/views/community_screen.dart';
+import 'package:scooby_app_new/views/pet_owner_profile_screen.dart';
 
+import 'package:scooby_app_new/views/services_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -10,36 +14,30 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final User? user = FirebaseAuth.instance.currentUser;
+  final HomeController _controller = HomeController();
+  int _selectedIndex = 0;
 
-  Future<void> _signOut() async {
-    await FirebaseAuth.instance.signOut();
-    if (!mounted) return;
+  final List<Widget> _screens = [
+    const Center(child: Text('Welcome')), 
+    const ServicesScreen(),
+    const AdoptionScreen(),
+    const CommunityScreen(),
+  ];
 
-    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
-
+  @override
+  void initState() {
+    super.initState();
+    _controller.fetchPetOwnerData();
   }
 
-  void _showLogoutConfirmation() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirm Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(), // Close dialog
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.of(context).pop(); // Close dialog first
-              await _signOut(); // Then sign out
-            },
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
+  void _onItemTapped(int index) {
+    setState(() => _selectedIndex = index);
+  }
+
+  void _goToProfile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const PetOwnerProfileScreen()),
     );
   }
 
@@ -49,29 +47,41 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: const Color(0xFF6A0DAD),
-        title: const Text("Welcome to Scooby"),
+        title: StreamBuilder<String>(
+          stream: _controller.ownerNameStream,
+          builder: (context, snapshot) {
+            final name = snapshot.data ?? 'Scooby';
+            return Text('Welcome, $name');
+          },
+        ),
+        leading: IconButton(
+          icon: const CircleAvatar(
+            backgroundImage: AssetImage('assets/images/profile.png'),
+          ),
+          onPressed: _goToProfile,
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: _showLogoutConfirmation,
+            onPressed: () => _controller.showLogoutDialog(context),
           ),
         ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              "You're logged in!",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              user?.email ?? 'No user email',
-              style: const TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-          ],
-        ),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _screens,
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        selectedItemColor: const Color(0xFF6A0DAD),
+        unselectedItemColor: Colors.grey,
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.pets), label: 'Services'),
+          BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Adoption'),
+          BottomNavigationBarItem(icon: Icon(Icons.group), label: 'Community'),
+        ],
       ),
     );
   }
