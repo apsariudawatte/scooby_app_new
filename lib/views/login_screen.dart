@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -23,60 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _isLoading = false;
 
-  Future<void> _login() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => _isLoading = true);
-
-    // Clear stale auth state (Fixes repeated login issues)
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser != null) {
-      await FirebaseAuth.instance.signOut();
-    }
-
-
-    User? user = await authService.signInWithEmail(
-  email: emailController.text.trim(),
-  password: passwordController.text.trim(),
-);
-
-
-
-    setState(() => _isLoading = false);
-
-    if (user != null) {
-      if (!mounted) return;
-
-      // Show popup dialog with logged in email
-      await showDialog(
-      context: context,
-      barrierDismissible: false, 
-      builder: (context) => AlertDialog(
-        title: const Text('Login Successful'),
-        content: Text('Logged in as ${user.email ?? 'Unknown'}'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          )
-        ],
-      ),
-    );
-
-
-      if (!mounted) return;
-
-      // Navigate to Pet Owner Home screen 
-      Navigator.pushReplacementNamed(context, '/petOwnerHome');
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login failed: Invalid email or password')),
-        );
-      }
-    }
-  }
-
+  
   Future<void> _signInWithGoogle() async {
     setState(() => _isLoading = true);
 
@@ -108,33 +57,94 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> loginAndNavigate(String email, String password) async {
+  Future<void> _loginAndRoute() async {
+  if (!_formKey.currentState!.validate()) return;
+
+  setState(() => _isLoading = true);
+
   try {
     final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-      email: email,
-      password: password,
+      email: emailController.text.trim(),
+      password: passwordController.text.trim(),
     );
 
-    final uid = userCredential.user!.uid;
-    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-    final role = doc['role'];
+    final user = userCredential.user;
+    if (user == null) {
+      throw FirebaseAuthException(code: 'user-null', message: 'User not found');
+    }
 
+    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+
+    if (!doc.exists || !doc.data()!.containsKey('role')) {
+      throw FirebaseAuthException(code: 'no-role', message: 'User role not defined');
+    }
+
+    final role = doc.get('role');
+
+    // ✅ Show popup on success
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Login Successful'),
+        content: Text('Logged in as ${user.email ?? 'Unknown'}'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          )
+        ],
+      ),
+    );
+
+    if (!mounted) return;
+
+    // ✅ Navigate based on role
     if (role == 'pet_owner') {
-      if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/petOwnerHome');
     } else if (role == 'service_provider') {
-      if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/serviceProviderHome');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unknown role')),
+      );
     }
-  } catch (e) {
-    ('Login Error: $e');
-    if (!mounted) return;
+  } on FirebaseAuthException catch (e) {
+    String message;
+    switch (e.code) {
+      case 'user-not-found':
+        message = 'No user found for that email.';
+        break;
+      case 'wrong-password':
+        message = 'Incorrect password.';
+        break;
+      case 'invalid-email':
+        message = 'Invalid email address.';
+        break;
+      case 'user-disabled':
+        message = 'User account is disabled.';
+        break;
+      case 'no-role':
+        message = 'User role not found in database.';
+        break;
+      default:
+        message = 'Login failed. Please try again.';
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Login failed')),
+      SnackBar(content: Text(message)),
     );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error: ${e.toString()}')),
+    );
+  } finally {
+    if (mounted) setState(() => _isLoading = false);
   }
 }
 
+
+  
 
   @override
   void dispose() {
@@ -181,7 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
               _isLoading
                   ? const CircularProgressIndicator()
                   : ElevatedButton(
-                      onPressed: _login,
+                      onPressed: _loginAndRoute,
                       child: const Text('Login'),
                     ),
               const SizedBox(height: 20),
