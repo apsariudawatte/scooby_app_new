@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:scooby_app_new/services/auth_services.dart';
 import 'package:scooby_app_new/views/login_screen.dart';
 
@@ -10,6 +12,7 @@ class RegisterServiceProvider extends StatefulWidget {
 }
 
 class _RegisterServiceProviderState extends State<RegisterServiceProvider> {
+  bool _isLoading = false;
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -22,8 +25,17 @@ class _RegisterServiceProviderState extends State<RegisterServiceProvider> {
 
   final List<String> _roles = ['Veterinarian', 'Pet Sitter', 'Pet Groomer'];
   String? _selectedRole;
+  File? _selectedImage;
+  
 
-Future<void> _register() async {
+  Future<void> _pickImage() async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (picked != null) {
+      setState(() => _selectedImage = File(picked.path));
+    }
+  }
+
+ Future<void> _register() async {
   if (_formKey.currentState!.validate()) {
     if (_selectedRole == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -32,8 +44,10 @@ Future<void> _register() async {
       return;
     }
 
+    setState(() => _isLoading = true);
+
     try {
-      final user = await AuthService().registerServiceProvider(
+      final res = await AuthService().registerServiceProvider(
         name: _nameController.text,
         phone: _phoneController.text,
         address: _addressController.text,
@@ -43,19 +57,20 @@ Future<void> _register() async {
         role: _selectedRole!,
         experience: _experienceController.text.trim(),
         description: _descriptionController.text.trim(),
+        profileImage: _selectedImage,
       );
 
-      if (user != null) {
-        if (!mounted) return;
+      if (!mounted) return;
+
+      if (res.user != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Registered successfully. Please log in.')),
         );
         Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const LoginScreen()),
-          );
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
       } else {
-        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Registration failed. Please try again.')),
         );
@@ -65,23 +80,12 @@ Future<void> _register() async {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: ${e.toString()}')),
       );
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 }
 
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _phoneController.dispose();
-    _addressController.dispose();
-    _cityController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    _descriptionController.dispose();
-    _experienceController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -94,8 +98,18 @@ Future<void> _register() async {
             key: _formKey,
             child: Column(
               children: [
-                // Removed image picker widget here
-
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: CircleAvatar(
+                    radius: 50,
+                    backgroundImage:
+                        _selectedImage != null ? FileImage(_selectedImage!) : null,
+                    child: _selectedImage == null
+                        ? const Icon(Icons.add_a_photo, size: 30)
+                        : null,
+                  ),
+                ),
+                const SizedBox(height: 12),
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(labelText: 'Name'),
@@ -147,13 +161,16 @@ Future<void> _register() async {
                   controller: _passwordController,
                   decoration: const InputDecoration(labelText: 'Password'),
                   obscureText: true,
-                  validator: (value) => value!.length < 6 ? 'Password must be at least 8 characters' : null,
+                  validator: (value) => value!.length < 6 ? 'Password must be at least 6 characters' : null,
                 ),
                 const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: _register,
-                  child: const Text('Register'),
-                ),
+               _isLoading
+                ? const CircularProgressIndicator()
+                : ElevatedButton(
+                    onPressed: _register,
+                    child: const Text('Register'),
+                  ),
+
               ],
             ),
           ),

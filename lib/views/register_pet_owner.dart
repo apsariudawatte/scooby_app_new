@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:scooby_app_new/services/auth_services.dart';
 import 'package:scooby_app_new/views/login_screen.dart';
 
@@ -10,134 +12,108 @@ class RegisterPetOwner extends StatefulWidget {
 }
 
 class _RegisterPetOwnerState extends State<RegisterPetOwner> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _addressController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final AuthService _authService = AuthService();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _cityController = TextEditingController();
 
-  final List<String> _cities = [
-    'Colombo', 'Kandy', 'Galle', 'Jaffna', 'Anuradhapura', 'Kurunegala'
-  ];
-  String? _selectedCity;
+  File? _image;
+  bool _isLoading = false;
 
-  void _register() async {
-    if (_formKey.currentState!.validate()) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const Center(child: CircularProgressIndicator()),
-      );
-
-      try {
-        final user = await _authService.registerPetOwner(
-          name: _nameController.text.trim(),
-          phone: _phoneController.text.trim(),
-          address: _addressController.text.trim(),
-          city: _selectedCity ?? '',
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-          profileImage: null, // No image provided
-        );
-
-        if (!mounted) return;
-        Navigator.of(context).pop(); // dismiss loading
-
-        if (user != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Registered successfully. Please log in.')),
-          );
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const LoginScreen()),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Registration failed.')),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          Navigator.of(context).pop(); // dismiss loading
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')),
-          );
-        }
-      }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all required fields.')),
-      );
+  Future<void> _pickImage() async {
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _image = File(pickedFile.path);
+      });
     }
   }
+
+  Future<void> _registerPetOwner() async {
+  if (_emailController.text.isEmpty ||
+      _passwordController.text.isEmpty ||
+      _nameController.text.isEmpty ||
+      _phoneController.text.isEmpty ||
+      _addressController.text.isEmpty ||
+      _cityController.text.isEmpty ||
+      _image == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Please fill all fields and pick an image")),
+    );
+    return;
+  }
+
+  setState(() => _isLoading = true);
+
+  try {
+    final result = await AuthService().registerPetOwner(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+      name: _nameController.text.trim(),
+      phone: _phoneController.text.trim(),
+      address: _addressController.text.trim(),
+      city: _cityController.text.trim(),
+      profileImage: _image,
+    );
+    if (!mounted) return;
+
+    if (result.user != null) {
+      // Success
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Registration successful! Please log in.')),
+      );
+
+      // Navigate to LoginScreen (imported at top)
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    } else {
+      // This is unlikely because if user == null, an error should be thrown
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Registration failed. Please try again.')),
+      );
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error: $e')),
+    );
+  } finally {
+    setState(() => _isLoading = false);
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Register Pet Owner')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
+      appBar: AppBar(title: const Text("Register as Pet Owner")),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: SingleChildScrollView(
           child: Column(
             children: [
+              TextField(controller: _emailController, decoration: const InputDecoration(labelText: "Email")),
+              TextField(controller: _passwordController, decoration: const InputDecoration(labelText: "Password"), obscureText: true),
+              TextField(controller: _nameController, decoration: const InputDecoration(labelText: "Name")),
+              TextField(controller: _phoneController, decoration: const InputDecoration(labelText: "Phone")),
+              TextField(controller: _addressController, decoration: const InputDecoration(labelText: "Address")),
+              TextField(controller: _cityController, decoration: const InputDecoration(labelText: "City")),
               const SizedBox(height: 10),
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
-                validator: (val) => val == null || val.isEmpty ? 'Required' : null,
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'Phone Number'),
-                validator: (val) {
-                  if (val == null || val.length != 10 || int.tryParse(val) == null) {
-                    return 'Enter valid 10-digit number';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _addressController,
-                decoration: const InputDecoration(labelText: 'Address'),
-                validator: (val) => val == null || val.isEmpty ? 'Required' : null,
-              ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                value: _selectedCity,
-                items: _cities
-                    .map((city) => DropdownMenuItem(value: city, child: Text(city)))
-                    .toList(),
-                onChanged: (val) => setState(() => _selectedCity = val),
-                decoration: const InputDecoration(labelText: 'Main City'),
-                validator: (val) => val == null ? 'Select city' : null,
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
-                validator: (val) => val == null || !val.contains('@') ? 'Invalid email' : null,
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: 'Password'),
-                validator: (val) {
-                  if (val == null || val.length < 8) return 'Min 8 characters';
-                  return null;
-                },
+              GestureDetector(
+                onTap: _pickImage,
+                child: _image != null
+                    ? CircleAvatar(backgroundImage: FileImage(_image!), radius: 40)
+                    : const CircleAvatar(radius: 40, child: Icon(Icons.add_a_photo)),
               ),
               const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _register,
-                child: const Text('Register'),
-              ),
+              _isLoading
+                  ? const CircularProgressIndicator()
+                  : ElevatedButton(
+                      onPressed: _registerPetOwner,
+                      child: const Text("Register"),
+                    ),
             ],
           ),
         ),
