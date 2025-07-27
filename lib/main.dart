@@ -29,7 +29,7 @@ class ScoobyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.deepPurple,
       ),
-      home: const Wrapper(),  
+      home: Wrapper(),  
 
 /* commented the below for routes management but used
       home: const Wrapper(),  // which decides which screen to show

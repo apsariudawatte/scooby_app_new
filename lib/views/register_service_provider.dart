@@ -1,6 +1,4 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:scooby_app_new/services/auth_services.dart';
 import 'package:scooby_app_new/views/login_screen.dart';
 
@@ -12,7 +10,6 @@ class RegisterServiceProvider extends StatefulWidget {
 }
 
 class _RegisterServiceProviderState extends State<RegisterServiceProvider> {
-  bool _isLoading = false;
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -25,17 +22,8 @@ class _RegisterServiceProviderState extends State<RegisterServiceProvider> {
 
   final List<String> _roles = ['Veterinarian', 'Pet Sitter', 'Pet Groomer'];
   String? _selectedRole;
-  File? _selectedImage;
-  
 
-  Future<void> _pickImage() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() => _selectedImage = File(picked.path));
-    }
-  }
-
- Future<void> _register() async {
+Future<void> _register() async {
   if (_formKey.currentState!.validate()) {
     if (_selectedRole == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -44,10 +32,8 @@ class _RegisterServiceProviderState extends State<RegisterServiceProvider> {
       return;
     }
 
-    setState(() => _isLoading = true);
-
     try {
-      final res = await AuthService().registerServiceProvider(
+      await AuthService().registerServiceProvider(
         name: _nameController.text,
         phone: _phoneController.text,
         address: _addressController.text,
@@ -57,35 +43,38 @@ class _RegisterServiceProviderState extends State<RegisterServiceProvider> {
         role: _selectedRole!,
         experience: _experienceController.text.trim(),
         description: _descriptionController.text.trim(),
-        profileImage: _selectedImage,
       );
 
       if (!mounted) return;
-
-      if (res.user != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registered successfully. Please log in.')),
-        );
-        Navigator.pushReplacement(
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Registered successfully. Please log in.')),
+      );
+      Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const LoginScreen()),
         );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registration failed. Please try again.')),
-        );
-      }
-    } catch (e) {
+        } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: ${e.toString()}')),
       );
-    } finally {
-      setState(() => _isLoading = false);
     }
   }
 }
 
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    _cityController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _descriptionController.dispose();
+    _experienceController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -98,18 +87,8 @@ class _RegisterServiceProviderState extends State<RegisterServiceProvider> {
             key: _formKey,
             child: Column(
               children: [
-                GestureDetector(
-                  onTap: _pickImage,
-                  child: CircleAvatar(
-                    radius: 50,
-                    backgroundImage:
-                        _selectedImage != null ? FileImage(_selectedImage!) : null,
-                    child: _selectedImage == null
-                        ? const Icon(Icons.add_a_photo, size: 30)
-                        : null,
-                  ),
-                ),
-                const SizedBox(height: 12),
+                // Removed image picker widget here
+
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(labelText: 'Name'),
@@ -161,16 +140,13 @@ class _RegisterServiceProviderState extends State<RegisterServiceProvider> {
                   controller: _passwordController,
                   decoration: const InputDecoration(labelText: 'Password'),
                   obscureText: true,
-                  validator: (value) => value!.length < 6 ? 'Password must be at least 6 characters' : null,
+                  validator: (value) => value!.length < 6 ? 'Password must be at least 8 characters' : null,
                 ),
                 const SizedBox(height: 20),
-               _isLoading
-                ? const CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: _register,
-                    child: const Text('Register'),
-                  ),
-
+                ElevatedButton(
+                  onPressed: _register,
+                  child: const Text('Register'),
+                ),
               ],
             ),
           ),
